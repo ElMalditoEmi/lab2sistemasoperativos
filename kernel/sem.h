@@ -1,13 +1,14 @@
 #ifndef SEM_H
 #define SEM_H
 
-#include "spinlock.h"
 #define maxsem 10
-struct semaphore
-{
-    int count; // Valor binario del semaforo
-               // 0 == Bloqueado 1 == Libre
-    struct spinlock lock;
-};
+
+int sem_open(int sem, int value);
+
+int sem_close(int sem);
+
+int sem_up(int sem);
+
+int sem_down(int sem);
 
 #endif
