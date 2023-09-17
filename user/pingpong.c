@@ -11,6 +11,13 @@ int main(int argc, char *argv[])
         return -1;
     }
 
+    if(argc != 2 || !atoi(argv[1]))     // atoi retorna 0 si no logra handlear los caracteres correctos
+    {
+        printf("ERROR: Se esperaba recibir un único valor mayor o igual que 0\n");
+        return -1;
+    }
+
+
     int times = atoi(argv[1]);
 
     if (fork() == 0)
@@ -39,6 +46,8 @@ int main(int argc, char *argv[])
             wait(0);
         }
     }
+
+    sem_close(0);
 
     return 0;
 }
