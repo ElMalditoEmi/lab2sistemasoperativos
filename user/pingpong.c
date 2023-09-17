@@ -6,7 +6,11 @@
 
 int main(int argc, char *argv[])
 {
-    sem_open(0, 1);
+    if(!sem_open(0, 1))
+    {
+        return -1;
+    }
+
     int times = atoi(argv[1]);
 
     if (fork() == 0)
@@ -14,7 +18,7 @@ int main(int argc, char *argv[])
         for (unsigned int i = 0u; i < times; ++i)
         {
             sem_down(0);
-            printf("Ping\n");
+            printf("ping\n");
             sem_up(0);
         }
     }
@@ -25,7 +29,7 @@ int main(int argc, char *argv[])
             for (unsigned int i = 0u; i < times; ++i)
             {
                 sem_down(0);
-                printf("\tPong\n");
+                printf("\tpong\n");
                 sem_up(0);
             }
         }
