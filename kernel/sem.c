@@ -9,8 +9,8 @@
 
 struct semaphore
 {
-    int count; // Valor binario del semaforo
-               // 0 == Bloqueado 1 == Libre
+    int count;
+    int opened;
     struct spinlock lock;
 };
 
@@ -21,7 +21,6 @@ int sem_open(int sem, int value)
     if (value < 0)
     {
         printf("ERROR: el primer argumento de sem_open debe ser mayor o igual que 0\n"); // CAMBIAR
-        // exit(1);
         return 0;
     }
 
@@ -30,22 +29,35 @@ int sem_open(int sem, int value)
         printf("ERROR: se crearon más semaforos que los permitidos\n"
                "La cantidad permitida es de 1 a %d\n",
                maxsem);
-        // exit(1);
         return 0;
     }
 
-    initlock(&(in_use[sem].lock), "newlock"); // Iniciar el spin
-    acquire(&(in_use[sem].lock));             // Y hacer que ningún otro hilo inicialize el semaforo al mismo tiempo
-    in_use[sem].count = value;                // Realizo los cambios a que faltan
-    release(&(in_use[sem].lock));             // Desbloqueo el spin
+    acquire(&(in_use[sem].lock)); // Y hacer que ningún otro hilo inicialice el semaforo al mismo tiempo
+
+   if (in_use[sem].opened != 0) // Si el semaforo ya estaba abierto devolver -1
+    {
+        release(&(in_use[sem].lock));
+        return -1;
+    }
+
+    in_use[sem].opened = 1;
+    in_use[sem].count = value; // Realizo los cambios a que faltan
+    release(&(in_use[sem].lock)); // Desbloqueo el spin
 
     return 1;
 }
 
-int sem_close(int sem){
-
+int sem_close(int sem)
+{
     acquire(&(in_use[sem].lock));
+    if (in_use[sem].opened == 0)
+    {
+        release(&(in_use[sem].lock));
+        return 0;
+    }
+    wakeup(&(in_use[sem].opened));
     in_use[sem].count = 0;
+    in_use[sem].opened = 0;
     release(&(in_use[sem].lock));
 
     return 1;
@@ -55,8 +67,8 @@ int sem_up(int sem)
 {
     acquire(&(in_use[sem].lock));
 
-    wakeup(&in_use[sem]); // Despierta los posibles procesos durmientes a causa del semaforo (como nunca es negativo, siempre que se le sume se deben liberar). En caso contrario es inocuo
     in_use[sem].count = in_use[sem].count + 1;
+    wakeup(&(in_use[sem])); // Despierta los posibles procesos durmientes a causa del semaforo (como nunca es negativo, siempre que se le sume se deben liberar). En caso contrario es inocuo
 
     release(&(in_use[sem].lock));
 
@@ -71,9 +83,26 @@ int sem_down(int sem)
     {
         sleep(&(in_use[sem]), &(in_use[sem].lock));
     }
-    in_use[sem].count = in_use[sem].count - 1;
+    
+    if(in_use[sem].count>=1){
+        in_use[sem].count = in_use[sem].count - 1;
+    }
+    else{
+        in_use[sem].count = 0;
+    }
 
     release(&(in_use[sem].lock));
 
     return 1;
+}
+
+void init_all_sem()
+{
+    for (unsigned int i = 0u; i < maxsem; i++)
+    {
+        in_use[i].count = 0;
+        in_use[i].opened = 0;
+        initlock(&(in_use[i].lock), "newlock"); // Iniciar el spin
+    }
+
 }
