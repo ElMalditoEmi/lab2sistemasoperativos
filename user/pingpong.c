@@ -4,36 +4,64 @@
 #include "kernel/fs.h"
 #include "kernel/sem.h"
 
-// Dice la palabra word si el semáforo sem está libre
-/*void say(char *word, int times)
-{   
-    for (unsigned int i = 0u; i < times; ++i)
+int pick_sem(int value)
+{
+    int opened = 0;
+    int sem = 0;
+
+    while (sem < maxsem && !opened)
     {
-    sem_down(times);
-    printf("%s", word);
-    sem_up(times);
+        opened = sem_open(sem, value);
+        if (!opened)
+        {
+            ++sem;
+        }
     }
-}*/
+
+    if (!opened)
+    {
+        return -1;
+    }
+
+    return sem;
+}
 
 // pkiller: pingpong 4 &; pingpong 5 &;
 int main(int argc, char *argv[])
 {
-    if (!sem_open(0, 1))
+    int sem1 = -1, sem2 = -1;
+
+    sem1 = pick_sem(1);
+    sem2 = pick_sem(0);
+
+    if (sem1 == -1)
     {
         printf("ERROR: pingpong no pudo abrir los semáforos: 0\n");
-        return -1;
+
+        if (sem2 != -1)
+        {
+            sem_close(sem2);
+        }
+
+        return 0;
     }
 
-    if (!sem_open(1, 0))
+    if (sem2 == -1)
     {
         printf("ERROR: pingpong no pudo abrir los semáforos: 1\n");
-        return -1;
+
+        if (sem1 != -1)
+        {
+            sem_close(sem1);
+        }
+
+        return 0;
     }
 
-    if(argc != 2 || !atoi(argv[1]))     // atoi retorna 0 si no logra handlear los caracteres correctos
+    if (argc != 2 || !atoi(argv[1])) // atoi retorna 0 si no logra handlear los caracteres correctos
     {
         printf("ERROR: Se esperaba recibir un único valor mayor o igual que 0\n");
-        return -1;
+        return 0;
     }
 
     int times = atoi(argv[1]);
@@ -42,9 +70,9 @@ int main(int argc, char *argv[])
     {
         for (unsigned int i = 0u; i < times; ++i)
         {
-            sem_down(0);
+            sem_down(sem1);
             printf("ping\n");
-            sem_up(1);
+            sem_up(sem2);
         }
     }
     else
@@ -53,20 +81,19 @@ int main(int argc, char *argv[])
         {
             for (unsigned int i = 0u; i < times; ++i)
             {
-                sem_down(1);
+                sem_down(sem2);
                 printf("\tpong\n");
-                sem_up(0);
+                sem_up(sem1);
             }
         }
         else
         {
             wait(0);
             wait(0);
+            sem_close(sem2);
+            sem_close(sem1);
         }
-        
     }
-    sem_close(0);
-    sem_close(1);
 
-    return 0;
+    return 1;
 }

@@ -34,10 +34,10 @@ int sem_open(int sem, int value)
 
     acquire(&(in_use[sem].lock)); // Y hacer que ningún otro hilo inicialice el semaforo al mismo tiempo
 
-   if (in_use[sem].opened != 0) // Si el semaforo ya estaba abierto devolver -1
+   if (in_use[sem].opened != 0) // Si el semaforo ya estaba abierto devolver 0
     {
         release(&(in_use[sem].lock));
-        return -1;
+        return 0;
     }
 
     in_use[sem].opened = 1;
@@ -55,7 +55,6 @@ int sem_close(int sem)
         release(&(in_use[sem].lock));
         return 0;
     }
-    wakeup(&(in_use[sem].opened));
     in_use[sem].count = 0;
     in_use[sem].opened = 0;
     release(&(in_use[sem].lock));
